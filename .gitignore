@@ -1,0 +1,8 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/SpeechCognitiveServices/obj
+/SpeechCognitiveServices/bin
+/.vs/SpeechCognitiveServices/v15
+/SpeechCognitiveServices/Properties/PublishProfiles
