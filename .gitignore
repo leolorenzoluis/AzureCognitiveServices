@@ -6,3 +6,5 @@
 /SpeechCognitiveServices/bin
 /.vs/SpeechCognitiveServices/v15
 /SpeechCognitiveServices/Properties/PublishProfiles
+/Bot/obj
+/Bot/wwwroot
