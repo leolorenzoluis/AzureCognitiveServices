@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.28307.329
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeechCognitiveServices", "SpeechCognitiveServices\SpeechCognitiveServices.csproj", "{7281BFE2-56A1-49F9-B8C5-A5E79D6D40D0}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MeetingMinutesBot", "Bot\MeetingMinutesBot.csproj", "{5124BBAD-10CA-4672-AE2C-4EC2A01FFF88}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{7281BFE2-56A1-49F9-B8C5-A5E79D6D40D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7281BFE2-56A1-49F9-B8C5-A5E79D6D40D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7281BFE2-56A1-49F9-B8C5-A5E79D6D40D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5124BBAD-10CA-4672-AE2C-4EC2A01FFF88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5124BBAD-10CA-4672-AE2C-4EC2A01FFF88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5124BBAD-10CA-4672-AE2C-4EC2A01FFF88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5124BBAD-10CA-4672-AE2C-4EC2A01FFF88}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
