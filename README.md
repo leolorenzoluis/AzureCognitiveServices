@@ -30,6 +30,9 @@ Open MeetingMinutesBot.bot and populate the AppId, AuthoringKey, SubscriptionKey
 Run the MeetingMinutesBot.csproject and you should be able to be see a page like this
 
 Run the Bot Framework Emulator and load MeetingMinutesBot.bot. Once loaded, make sure you're connected to the web server that you deployed the bot with.
+
 You can start talking to the bot based on what you recorded as your intent from LUIS.ai. For my example, I just used a basic dialogue of Start the meeting and Stop the meeting.
+
 Once you mentioned to the bot that you want to stop the meeting, you should be able to see a console application that will launched to start calling different Azure Cognitive Services.
+
 After the console application has finished aggregating the results from different cognitive services, you should be able to see it launching UIRobot to run the workflow for Robotic Process Automation to OneNote and Excel.
