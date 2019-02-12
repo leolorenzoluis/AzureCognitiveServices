@@ -87,6 +87,7 @@ namespace MeetingMinutesBot
             });
         }
 
+        // Note: ReSharper might think it's not used but ASP.NET core uses magic to call Configure to bootstrap the web app.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
             _loggerFactory = loggerFactory;

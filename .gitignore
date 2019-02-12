@@ -8,3 +8,4 @@
 /SpeechCognitiveServices/Properties/PublishProfiles
 /Bot/obj
 /Bot/wwwroot
+/Bot/bin/Debug/netcoreapp2.1

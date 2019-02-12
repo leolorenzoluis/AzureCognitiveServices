@@ -1,0 +1,27 @@
+{
+  "name": "MeetingMinutesBot",
+  "description": "",
+  "services": [
+    {
+      "type": "endpoint",
+      "appId": "",
+      "appPassword": "",
+      "endpoint": "http://localhost:3978/api/messages",
+      "id": "1",
+      "name": "development"
+    },
+    {
+      "type": "luis",
+      "name": "LuisBot",
+      "appId": "",
+      "version": "0.1",
+      "authoringKey": "",
+      "subscriptionKey": "",
+      "region": "",
+      "id": "158"
+    }
+  ],
+  "padlock": "",
+  "version": "2.0",
+  "overrides": null
+}
