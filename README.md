@@ -1,3 +1,5 @@
+https://leoluis.xyz/creating-a-meeting-minutes-transcriber-bot-with-sentiment-analysis-and-information-extraction/
+
 I recently blogged about Robotic Process Automation and was curious as to how we can incorporate Machine Learning and make the robots smarter. In this post, I will guide you on how to run the meeting minutes transcriber. The idea is that if there is a meeting that is going to start, the meeting organizer can talk to a bot and the bot will start recording and will later transcribe the output to the meeting organizer's OneNote and Excel.
 # Prerequisites
 - Download the sample code from Github.
