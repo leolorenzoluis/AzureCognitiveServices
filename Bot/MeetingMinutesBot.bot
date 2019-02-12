@@ -1,0 +1,36 @@
+{
+  "name": "MeetingMinutesBot",
+  "description": "",
+  "services": [
+    {
+      "type": "endpoint",
+      "appId": "",
+      "appPassword": "",
+      "endpoint": "http://localhost:3978/api/messages",
+      "id": "1",
+      "name": "development"
+    },
+    {
+      "type": "endpoint",
+      "appPassword": "ndySDBE$jljdVHD18092#()",
+      "endpoint": "https://blahblahbotbot.azurewebsites.net/api/messages",
+      "id": "40",
+      "name": "blahblahbotbot",
+      "appId": "d6ea4dc8-7707-4984-891f-219d17a1b351"
+    },
+    {
+      "type": "luis",
+      "name": "LuisBot",
+      "appId": "33c03e3e-c41d-4c26-8428-48b174d918dc",
+      "version": "0.1",
+      "authoringKey": "aad8c93181684b818fd9365c3c09270b",
+      "subscriptionKey": "aad8c93181684b818fd9365c3c09270b",
+      "region": "westus",
+      "id": "158"
+    }
+  ],
+  "padlock": "",
+  "version": "2.0",
+  "overrides": null,
+  "path": "C:\\Users\\lluisadmin\\Documents\\Visual Studio 2017\\Projects\\EchoBot1\\EchoBot1\\EchoBot1.bot"
+}
