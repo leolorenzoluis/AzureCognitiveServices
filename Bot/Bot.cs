@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Activity = Microsoft.Bot.Schema.Activity;
 
 namespace MeetingMinutesBot
 {
@@ -92,11 +94,12 @@ namespace MeetingMinutesBot
                 await turnContext.SendActivityAsync(
                     $"Job {uiPathJobResponse.JobId} is complete. {uiPathJobResponse.Message}",
                     cancellationToken: token);
-                _logger.LogDebug($"Received UI Path Job Response Type {uiPathJobResponse.Type}");
+                _logger.LogDebug($"Received UI Path Job Response Type - {uiPathJobResponse.Type}");
+                Activity reply;
                 switch (uiPathJobResponse.Type)
                 {
                     case UiPathEventType.HelpDesk:
-                        var reply = turnContext.Activity.CreateReply(
+                        reply = turnContext.Activity.CreateReply(
                             "Networking team has approved your help desk ticket. Which of the following approved routers would you like to purchase?");
                         reply.Type = ActivityTypes.Message;
                         reply.TextFormat = TextFormatTypes.Plain;
@@ -118,11 +121,17 @@ namespace MeetingMinutesBot
                                 {
                                     Title = "TP-Link AC1200", Type = ActionTypes.ImBack,
                                     Value = "Please purchase TP-Link AC1200"
-                                },
-                            },
+                                }
+                            }
                         };
                         await turnContext.SendActivityAsync(reply, cancellationToken: token);
                         break;
+                    case UiPathEventType.Amazon:
+                        reply = turnContext.Activity.CreateReply();
+                        reply.Attachments.Add(GetReceiptCard().ToAttachment());
+                        await turnContext.SendActivityAsync(reply, cancellationToken: token);
+                    break;
+
                 }
             };
         }
@@ -280,10 +289,59 @@ namespace MeetingMinutesBot
             }
         }
 
+
+        /// <summary>
+        /// Creates a <see cref="ReceiptCard"/>.
+        /// </summary>
+        /// <returns>A <see cref="ReceiptCard"/> the user can view and/or interact with.</returns>
+        /// <remarks>Related types <see cref="CardImage"/>, <see cref="CardAction"/>,
+        /// <see cref="ActionTypes"/>, <see cref="ReceiptItem"/>, and <see cref="Fact"/>.</remarks>
+        private static ReceiptCard GetReceiptCard()
+        {
+            var receiptCard = new ReceiptCard
+            {
+                Title = "John Doe",
+
+                Facts = new List<Fact>
+                    {new Fact("Order Number", "9378-4839-43289"), new Fact("Payment Method", "VISA 1234-****")},
+
+                Items = new List<ReceiptItem>
+                {
+                    new ReceiptItem
+                    {
+                        Image = new CardImage(
+                            "http://www.vmastoryboard.com/wp-content/uploads/2014/08/Amazon-A-Logo.jpg"),
+                    },
+                    new ReceiptItem(
+                        "2QW1646 Cisco RV320",
+                        subtitle:
+                        "The Cisco RV320 provides reliable, highly secure access connectivity for you and your employees that is so transparent you will not know it is there.",
+                        price: "104.50",
+                        quantity: "1",
+                        image: new CardImage(
+                            url: "https://images-na.ssl-images-amazon.com/images/I/51ReTYTeQyL._SX425_.jpg")
+                    ),
+                },
+                Tax = "7.50",
+                Vat = "1.99",
+                Total = "$113.99",
+                Buttons = new List<CardAction>
+                {
+                    new CardAction(
+                        ActionTypes.OpenUrl,
+                        "More information",
+                        "https://amazon.com"),
+                },
+            };
+
+            return receiptCard;
+        }
+
+
         private string CreateUiPathProcessArguments(string fileName, object argument)
         {
             var uiPathProcessArguments =
-                $@"/file ""C:\Users\lluisadmin\Documents\Pyramid Labs\RPA\{fileName}"" /input ""{HttpUtility.JavaScriptStringEncode(JsonConvert.SerializeObject(argument))}"" ";
+                $@"/file ""{Path.Combine(_config.UiPathWorkingDirectory, fileName)}"" /input ""{HttpUtility.JavaScriptStringEncode(JsonConvert.SerializeObject(argument))}"" ";
             _logger.LogDebug($"Ui Path Process Arguments {uiPathProcessArguments}");
             return
                 uiPathProcessArguments;
