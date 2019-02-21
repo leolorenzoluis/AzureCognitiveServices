@@ -13,7 +13,12 @@ namespace MeetingMinutesBot
 
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .ConfigureLogging((hostingContext, logging) => { logging.AddAzureWebAppDiagnostics(); })
+                .ConfigureLogging((hostingContext, logging) => {
+                    logging.AddAzureWebAppDiagnostics();
+                    logging.AddConsole();
+                    logging.AddDebug();
+                    logging.AddEventSourceLogger();
+                })
                 .UseStartup<Startup>()
                 .Build();
     }
