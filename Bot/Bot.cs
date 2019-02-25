@@ -94,7 +94,7 @@ namespace MeetingMinutesBot
                 await turnContext.SendActivityAsync(
                     $"Job {uiPathJobResponse.JobId} is complete. {uiPathJobResponse.Message}",
                     cancellationToken: token);
-                _logger.LogDebug($"Received UI Path Job Response Type - {uiPathJobResponse.Type}");
+                _logger.LogDebug($"Received UI Path Job Response Type {uiPathJobResponse.Type}");
                 Activity reply;
                 switch (uiPathJobResponse.Type)
                 {

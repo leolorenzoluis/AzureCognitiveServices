@@ -9,3 +9,5 @@
 /Bot/obj
 /Bot/wwwroot
 /Bot/bin/Debug/netcoreapp2.1
+/Bot/bin
+/Bot/Properties/PublishProfiles

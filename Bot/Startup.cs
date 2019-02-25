@@ -55,7 +55,7 @@ namespace MeetingMinutesBot
             var uiPathSendEmailFileName = Configuration.GetSection("uiPathSendEmailFileName")?.Value ?? throw new ArgumentNullException("uiPathSendEmailFileName is required. Check your appsettings.json");
             var uiPathWorkingDirectory = Configuration.GetSection("uiPathWorkingDirectory")?.Value ?? throw new ArgumentNullException("uiPathWorkingDirectory is required. Check your appsettings.json");
             var uiRobotPath = Configuration.GetSection("uiRobotPath")?.Value ?? throw new ArgumentNullException("uiRobotPath is required. Check your appsettings.json");
-            var speechRecognitionWorkingDirectory = Configuration.GetSection("uiPathBuyProductsOnAmazonFileName")?.Value ?? throw new ArgumentNullException("speechRecognitionWorkingDirectory is required. Check your appsettings.json");
+            var speechRecognitionWorkingDirectory = Configuration.GetSection("speechRecognitionWorkingDirectory")?.Value ?? throw new ArgumentNullException("speechRecognitionWorkingDirectory is required. Check your appsettings.json");
             var speechRecognitionDll = Configuration.GetSection("speechRecognitionDll")?.Value ?? throw new ArgumentNullException("speechRecognitionDll is required. Check your appsettings.json");
             // ReSharper restore NotResolvedInText
             // Loads .bot configuration file and adds a singleton that your Bot can access through dependency injection.
