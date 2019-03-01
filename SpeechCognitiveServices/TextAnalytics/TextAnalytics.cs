@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -6,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.CognitiveServices.Language.TextAnalytics;
 using Microsoft.Azure.CognitiveServices.Language.TextAnalytics.Models;
 using Microsoft.Rest;
+using SpeechCognitiveServices.Properties;
 using static System.Console;
 
 namespace SpeechCognitiveServices.TextAnalytics
@@ -22,7 +24,7 @@ namespace SpeechCognitiveServices.TextAnalytics
             _fullTranscribeSpeechPath = fullTranscribeSpeechPath;
             _client = new TextAnalyticsClient(new TextAnalyticsApiKeyServiceClientCredentials())
             {
-                Endpoint = "https://westcentralus.api.cognitive.microsoft.com"
+                Endpoint = "https://eastus.api.cognitive.microsoft.com"
             };
         }
 
@@ -112,30 +114,45 @@ namespace SpeechCognitiveServices.TextAnalytics
                 WriteLine("The file could not be read:");
                 WriteLine(e.Message);
             }
-
-            // Identify entities
-            WriteLine("\n\n===== ENTITIES ======");
-
-            var entitiesResult = _client.EntitiesAsync(
-                new MultiLanguageBatchInput(
-                    new List<MultiLanguageInput>
-                    {
-                        new MultiLanguageInput("en", "0",
-                            "The Great Depression began in 1929. By 1933, the GDP in America fell by 25%.")
-                    })).Result;
-
-            // Printing entities results
-            foreach (var document in entitiesResult.Documents)
+            catch (Exception e)
             {
-                WriteLine($"Document ID: {document.Id} ");
+                WriteLine("There was an error. Maybe your file is empty?");
+                WriteLine(e.Message);
+            }
+        }
 
-                WriteLine("\t Entities:");
+        public void IdentifyEntities()
+        {
+            try
+            {
+                WriteLine("\n\n===== ENTITIES ======");
 
-                foreach (EntityRecordV2dot1 entity in document.Entities)
+                var entitiesResult = _client.EntitiesAsync(
+                    new MultiLanguageBatchInput(
+                        new List<MultiLanguageInput>
+                        {
+                            new MultiLanguageInput("en", "0",
+                                "The Great Depression began in 1929. By 1933, the GDP in America fell by 25%.")
+                        })).Result;
+
+                // Printing entities results
+                foreach (var document in entitiesResult.Documents)
                 {
-                    WriteLine(
-                        $"\t\t{entity.Name}\t\t{entity.WikipediaUrl}\t\t{entity.Type}\t\t{entity.SubType}");
+                    WriteLine($"Document ID: {document.Id} ");
+
+                    WriteLine("\t Entities:");
+
+                    foreach (EntityRecordV2dot1 entity in document.Entities)
+                    {
+                        WriteLine(
+                            $"\t\t{entity.Name}\t\t{entity.WikipediaUrl}\t\t{entity.Type}\t\t{entity.SubType}");
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                WriteLine(e);
+                throw;
             }
         }
     }
@@ -144,7 +161,7 @@ namespace SpeechCognitiveServices.TextAnalytics
     {
         public override Task ProcessHttpRequestAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            request.Headers.Add("Ocp-Apim-Subscription-Key", Config.TextAnalyticsKey);
+            request.Headers.Add("Ocp-Apim-Subscription-Key", Settings.Default.TextAnalyticsSubscriptionKey);
             return base.ProcessHttpRequestAsync(request, cancellationToken);
         }
     }

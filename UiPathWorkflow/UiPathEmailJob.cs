@@ -1,8 +1,8 @@
-﻿namespace MeetingMinutesBot.UiPathDomain
+﻿namespace UiPathWorkflow
 {
-    public class UiPathEmailJob : IUiPathJob
+    public class UiPathEmailJob : UiPathArguments
     {
-        public UiPathEmailJob(int jobId, string serviceUrl, string emailSubject, string emailBody, string emailToSend)
+        public UiPathEmailJob(string jobId, string serviceUrl, string emailSubject, string emailBody, string emailToSend)
         {
             JobId = jobId;
             ServiceUrl = serviceUrl;
@@ -11,8 +11,6 @@
             EmailToSend = emailToSend;
         }
 
-        public int JobId { get; }
-        public string ServiceUrl { get; }
         public string EmailToSend { get; }
         public string EmailBody { get; }
         public string EmailSubject { get; }

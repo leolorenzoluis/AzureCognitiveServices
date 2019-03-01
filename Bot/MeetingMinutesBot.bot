@@ -11,13 +11,21 @@
       "name": "development"
     },
     {
+      "type": "endpoint",
+      "appId": "",
+      "appPassword": "",
+      "endpoint": "",
+      "id": "2",
+      "name": "production"
+    },
+    {
       "type": "luis",
       "name": "LuisBot",
       "appId": "",
       "version": "0.1",
       "authoringKey": "",
       "subscriptionKey": "",
-      "region": "",
+      "region": "westus",
       "id": "158"
     }
   ],

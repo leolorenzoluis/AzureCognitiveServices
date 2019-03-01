@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace MeetingMinutesBot.UiPathDomain
+namespace UiPathWorkflow
 {
     public enum UiPathEventType
     {
@@ -11,6 +11,8 @@ namespace MeetingMinutesBot.UiPathDomain
         HelpDesk,
         [EnumMember(Value = "Email")]
         Email,
+        [EnumMember(Value = "MeetingMinutes")]
+        MeetingMinutes,
         [EnumMember(Value = "")]
         None
     }

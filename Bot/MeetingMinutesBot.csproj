@@ -4,9 +4,17 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <UserSecretsId>6a973c22-38b2-4908-9445-f27645c93f69</UserSecretsId>
     <Platforms>AnyCPU;x64;x86</Platforms>
+    <TypeScriptToolsVersion>3.1</TypeScriptToolsVersion>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="MeetingMinutesBot.local.bot" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="MeetingMinutesBot.local.bot">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="MeetingMinutesBot.bot">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -22,12 +30,15 @@
     <PackageReference Include="Microsoft.Bot.Connector" Version="4.2.2" />
     <PackageReference Include="Microsoft.Bot.Schema" Version="4.2.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.AzureAppServices" Version="2.2.0" />
-    <PackageReference Include="NAudio" Version="1.8.5" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Update="appsettings.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UiPathWorkflow\UiPathWorkflow.csproj" />
   </ItemGroup>
 </Project>

@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
-using MeetingMinutesBot.UiPathDomain;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Configuration;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UiPathWorkflow;
 using Activity = Microsoft.Bot.Schema.Activity;
 
 namespace MeetingMinutesBot
@@ -32,10 +28,8 @@ namespace MeetingMinutesBot
 
         public static readonly string LuisKey = "LuisBot";
         private readonly BotServices _services;
-        private readonly AudioWriter _writer;
         private readonly StateBotAccessors _stateBotPropertyAccessors;
         private readonly JobState _jobState;
-        private readonly Config _config;
 
 
         private readonly IStatePropertyAccessor<JobStorage> _jobStatePropertyAccessor;
@@ -46,13 +40,15 @@ namespace MeetingMinutesBot
         /// See <see cref="BotAdapter.ContinueConversationAsync"/> for more details.</remarks>
         private string AppId { get; }
 
+        private string AppPassword { get; }
+        private string ServiceEndpoint { get; }
+        private static UiPathHttpClient _uiPathHttpClient;
+
         public Bot(ILoggerFactory loggerFactory, BotServices services, EndpointService endpointService,
-            AudioWriter writer, StateBotAccessors stateBotPropertyAccessors, JobState jobState, Config config)
+            StateBotAccessors stateBotPropertyAccessors, JobState jobState, Config config)
         {
             _services = services ?? throw new ArgumentNullException(nameof(services));
             _jobState = jobState ?? throw new ArgumentNullException(nameof(jobState));
-            _config = config;
-            _writer = writer;
             _stateBotPropertyAccessors = stateBotPropertyAccessors;
             _jobStatePropertyAccessor = jobState.CreateProperty<JobStorage>(nameof(JobState));
             if (!_services.LuisServices.ContainsKey(LuisKey))
@@ -68,6 +64,9 @@ namespace MeetingMinutesBot
             _logger = loggerFactory.CreateLogger<Bot>();
             _services = services;
             AppId = string.IsNullOrEmpty(endpointService.AppId) ? "1" : endpointService.AppId;
+            AppPassword = string.IsNullOrEmpty(endpointService.AppId) ? "1" : endpointService.AppPassword;
+            ServiceEndpoint = endpointService.Endpoint;
+            _uiPathHttpClient = new UiPathHttpClient(config.UiPathUserName, config.UiPathPassword, config.UiPathTenancyName);
         }
 
         private async Task CompleteJobAsync(BotAdapter adapter, string botId, JobStorage jobStorage,
@@ -92,6 +91,7 @@ namespace MeetingMinutesBot
                 await _jobStatePropertyAccessor.SetAsync(turnContext, jobStorage, token);
                 await _jobState.SaveChangesAsync(turnContext, cancellationToken: token);
                 await turnContext.SendActivityAsync(
+                    $"Job {uiPathJobResponse.JobId} is complete. {uiPathJobResponse.Message}",
                     $"Job {uiPathJobResponse.JobId} is complete. {uiPathJobResponse.Message}",
                     cancellationToken: token);
                 _logger.LogDebug($"Received UI Path Job Response Type {uiPathJobResponse.Type}");
@@ -130,8 +130,7 @@ namespace MeetingMinutesBot
                         reply = turnContext.Activity.CreateReply();
                         reply.Attachments.Add(GetReceiptCard().ToAttachment());
                         await turnContext.SendActivityAsync(reply, cancellationToken: token);
-                    break;
-
+                        break;
                 }
             };
         }
@@ -166,9 +165,15 @@ namespace MeetingMinutesBot
                         switch (topIntent.Value.intent)
                         {
                             case StartRecording:
-                                _writer.StartRecording();
-                                await turnContext.SendActivityAsync("Boss I'm going to start the recording.",
+                                await turnContext.SendActivityAsync("Boss I'm going to start the recording.", inputHint: InputHints.IgnoringInput,
                                     cancellationToken: cancellationToken);
+                                await turnContext.Adapter.ContinueConversationAsync(AppId,
+                                    _stateBotPropertyAccessors.AudioRecorderConversationReference,
+                                    async (context, token) =>
+                                    {
+                                        await context.SendActivityAsync(StartRecording, cancellationToken: token);
+                                    },
+                                    cancellationToken);
                                 break;
                             case SalesForecast:
                                 await turnContext.SendActivityAsync(
@@ -180,45 +185,61 @@ namespace MeetingMinutesBot
                                     cancellationToken: cancellationToken);
                                 break;
                             case StopRecording:
-                                _writer.StopRecording();
                                 await turnContext.SendActivityAsync(
                                     "Boss I'm going to stop the recording and will start processing meeting minutes.",
                                     cancellationToken: cancellationToken);
-                                StartProcess("dotnet", _config.SpeechRecognitionDll,
-                                    _config.SpeechRecognitionWorkingDirectory);
+
+                                job = await CreateJob(turnContext, cancellationToken);
+                                await turnContext.Adapter.ContinueConversationAsync(AppId,
+                                    _stateBotPropertyAccessors.AudioRecorderConversationReference,
+                                    async (context, token) =>
+                                    {
+                                        await context.SendActivityAsync($"{StopRecording},{job.Id}", cancellationToken: token);
+                                    },
+                                    cancellationToken);
                                 break;
                             case CreateHelpDeskTicket:
                                 job = await CreateJob(turnContext, cancellationToken);
-                                var uiPathJobRequest = new UiPathJobRequest(job.Id, turnContext.Activity.ServiceUrl);
-                                StartProcess(_config.UiRobotPath,
-                                    CreateUiPathProcessArguments(_config.UiPathCreateHelpDeskJobFileName,
-                                        uiPathJobRequest),
-                                    _config.UiPathWorkingDirectory);
+                                //var uiPathJobRequest = new UiPathJobRequest(job.Id, turnContext.Activity.ServiceUrl);
+
+                                var uiPathArguments = new UiPathArguments
+                                {
+                                    BotAppId = AppId,
+                                    BotAppPassword = AppPassword,
+                                    JobId = job.Id.ToString(),
+                                    ServiceUrl = ServiceEndpoint
+                                };
+                                await _uiPathHttpClient.SendUiPathJob(uiPathArguments, "963d294a-960b-4e16-b6af-3b5dd782f637",
+                                    cancellationToken);
                                 break;
                             case BuyAmazon:
                                 job = await CreateJob(turnContext, cancellationToken);
-                                var amazonJob = new UiPathAmazonJob(job.Id,
-                                    turnContext.Activity.ServiceUrl,
-                                    new List<string> {"2QW1646 Cisco RV320"});
-                                StartProcess(_config.UiRobotPath,
-                                    CreateUiPathProcessArguments(_config.UiPathBuyProductsOnAmazonFileName, amazonJob),
-                                    _config.UiPathWorkingDirectory);
+                                var amazonJob = new AmazonUiPathArguments
+                                {
+                                    BotAppId = AppId,
+                                    BotAppPassword = AppPassword,
+                                    JobId = job.Id.ToString(),
+                                    ServiceUrl = ServiceEndpoint,
+                                    Products = new List<string> {"2QW1646 Cisco RV320"}
+                                };
+                                await _uiPathHttpClient.SendUiPathJob(amazonJob, "91497268-6c3a-4bef-8fdd-36a802386921",
+                                    cancellationToken);
                                 break;
                             case SendEmail:
                                 job = await CreateJob(turnContext, cancellationToken);
-                                var emailJob = new UiPathEmailJob(job.Id, turnContext.Activity.ServiceUrl,
+                                var emailJob = new UiPathEmailJob(job.Id.ToString(), turnContext.Activity.ServiceUrl,
                                     $"Meeting minutes for {DateTime.Today.ToShortDateString()}", "Hello World",
                                     "lluis@psi-it.com");
-                                StartProcess(_config.UiRobotPath,
-                                    CreateUiPathProcessArguments(_config.UiPathSendEmailFileName,
-                                        emailJob),
-                                    _config.UiPathWorkingDirectory);
-                                break;
+
+                                await _uiPathHttpClient.SendUiPathJob(emailJob, "91497268-6c3a-4bef-8fdd-36a802386921",
+                                    cancellationToken);
+                                    break;
                             default:
                                 // Help or no intent identified, either way, let's provide some help.
                                 // to the user
                                 await turnContext.SendActivityAsync(
                                     "Boss I'm sorry but I didn't understand what you just said to me.",
+                                    inputHint: InputHints.IgnoringInput,
                                     cancellationToken: cancellationToken);
                                 break;
                         }
@@ -227,7 +248,7 @@ namespace MeetingMinutesBot
                     {
                         const string msg =
                             @"No LUIS intents were found. Try typing 'Start Meeting' or 'Stop Meeting'.";
-                        await turnContext.SendActivityAsync(msg, cancellationToken: cancellationToken);
+                        await turnContext.SendActivityAsync(msg, msg, InputHints.IgnoringInput, cancellationToken: cancellationToken);
                     }
 
                     break;
@@ -272,6 +293,13 @@ namespace MeetingMinutesBot
                             if (member.Id == turnContext.Activity.Recipient.Id) continue;
                             _logger.LogTrace($"Member Name: {member.Name} & Member JobId: {member.Id}");
                             user.DidBotWelcomeUser = true;
+
+                            if (member.Name == "AudioRecorder")
+                            {
+                                _stateBotPropertyAccessors.AudioRecorderConversationReference =
+                                    turnContext.Activity.GetConversationReference();
+                            }
+
                             await _stateBotPropertyAccessors.UserAccessor.SetAsync(turnContext, user,
                                 cancellationToken);
                             await _stateBotPropertyAccessors.UserState.SaveChangesAsync(turnContext,
@@ -288,6 +316,7 @@ namespace MeetingMinutesBot
                     break;
             }
         }
+
 
 
         /// <summary>
@@ -330,39 +359,14 @@ namespace MeetingMinutesBot
                     new CardAction(
                         ActionTypes.OpenUrl,
                         "More information",
+                        "https://amazon.com",
+                        "https://amazon.com",
+                        "https://amazon.com",
                         "https://amazon.com"),
                 },
             };
 
             return receiptCard;
-        }
-
-
-        private string CreateUiPathProcessArguments(string fileName, object argument)
-        {
-            var uiPathProcessArguments =
-                $@"/file ""{Path.Combine(_config.UiPathWorkingDirectory, fileName)}"" /input ""{HttpUtility.JavaScriptStringEncode(JsonConvert.SerializeObject(argument))}"" ";
-            _logger.LogDebug($"Ui Path Process Arguments {uiPathProcessArguments}");
-            return
-                uiPathProcessArguments;
-        }
-
-        private static void StartProcess(string fileName, string processArguments, string workingDirectory)
-        {
-            var callUiRobot = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = fileName,
-                    Arguments = processArguments,
-                    UseShellExecute = true,
-                    WorkingDirectory = workingDirectory,
-                    RedirectStandardOutput = false,
-                    RedirectStandardError = false,
-                    CreateNoWindow = true
-                }
-            };
-            callUiRobot.Start();
         }
 
         private async Task<Job> CreateJob(ITurnContext turnContext, CancellationToken cancellationToken)

@@ -50,33 +50,15 @@ namespace MeetingMinutesBot
             var secretKey = Configuration.GetSection("botFileSecret")?.Value;
             var botFilePath = Configuration.GetSection("botFilePath")?.Value;
             // ReSharper disable NotResolvedInText
-            var uiPathCreateHelpDeskJobFileName = Configuration.GetSection("uiPathCreateHelpDeskJobFileName")?.Value ?? throw new ArgumentNullException("uiPathCreateHelpDeskJobFileName is required. Check your appsettings.json");
-            var uiPathBuyProductsOnAmazonFileName = Configuration.GetSection("uiPathBuyProductsOnAmazonFileName")?.Value ?? throw new ArgumentNullException("uiPathBuyProductsOnAmazonFileName is required. Check your appsettings.json");
-            var uiPathSendEmailFileName = Configuration.GetSection("uiPathSendEmailFileName")?.Value ?? throw new ArgumentNullException("uiPathSendEmailFileName is required. Check your appsettings.json");
-            var uiPathWorkingDirectory = Configuration.GetSection("uiPathWorkingDirectory")?.Value ?? throw new ArgumentNullException("uiPathWorkingDirectory is required. Check your appsettings.json");
-            var uiRobotPath = Configuration.GetSection("uiRobotPath")?.Value ?? throw new ArgumentNullException("uiRobotPath is required. Check your appsettings.json");
-            var speechRecognitionWorkingDirectory = Configuration.GetSection("speechRecognitionWorkingDirectory")?.Value ?? throw new ArgumentNullException("speechRecognitionWorkingDirectory is required. Check your appsettings.json");
-            var speechRecognitionDll = Configuration.GetSection("speechRecognitionDll")?.Value ?? throw new ArgumentNullException("speechRecognitionDll is required. Check your appsettings.json");
+            var uiPathTenancyName = Configuration.GetSection("uiPathTenancyName")?.Value ?? throw new ArgumentNullException("uiPathTenancyName is required. Check your appsettings.json");
+            var uiPathUserName = Configuration.GetSection("uiPathUserName")?.Value ?? throw new ArgumentNullException("uiPathUserName is required. Check your appsettings.json");
+            var uiPathPassword = Configuration.GetSection("uiPathPassword")?.Value ?? throw new ArgumentNullException("uiPathPassword is required. Check your appsettings.json");
             // ReSharper restore NotResolvedInText
             // Loads .bot configuration file and adds a singleton that your Bot can access through dependency injection.
             var botConfig = BotConfiguration.Load(botFilePath ?? @".\MeetingMinutesBot.bot", secretKey);
             services.AddSingleton(sp =>
                 botConfig ??
                 throw new InvalidOperationException($"The .bot config file could not be loaded. ({(BotConfiguration) null})"));
-
-
-            // Initialize Bot Connected Services clients.
-            var connectedServices = new BotServices(botConfig);
-            services.AddSingleton(sp => new Config(uiPathCreateHelpDeskJobFileName, uiPathWorkingDirectory, uiRobotPath, uiPathBuyProductsOnAmazonFileName, uiPathSendEmailFileName, speechRecognitionDll, speechRecognitionWorkingDirectory));
-            services.AddSingleton(sp => connectedServices);
-            services.AddSingleton(sp => botConfig);
-            
-            services.AddSingleton<AudioWriter>();
-
-            var dataStore = new MemoryStorage();
-            var conversationState = new ConversationState(dataStore);
-            var jobState = new JobState(dataStore);
-            var userState = new UserState(dataStore);
 
             services.AddBot<Bot>(options =>
             {
@@ -101,8 +83,6 @@ namespace MeetingMinutesBot
                     await context.SendActivityAsync("Sorry, it looks like something went wrong.");
                 };
             });
-
-
             services.AddSingleton(sp =>
             {
                 var service = botConfig.Services.FirstOrDefault(s => s.Type == "endpoint" && s.Name == environment);
@@ -113,11 +93,22 @@ namespace MeetingMinutesBot
 
                 return (EndpointService)service;
             });
-            services.AddSingleton(sp => jobState);
+
+            // Initialize Bot Connected Services clients.
+            var connectedServices = new BotServices(botConfig);
+            var dataStore = new MemoryStorage();
+            var conversationState = new ConversationState(dataStore);
+            var jobState = new JobState(dataStore);
+            var userState = new UserState(dataStore);
+
             services.AddSingleton(sp => new StateBotAccessors(conversationState, userState)
             {
                 UserAccessor = userState.CreateProperty<User>(StateBotAccessors.UserName)
             });
+            services.AddSingleton(sp => jobState);
+            services.AddSingleton(sp => new Config(uiPathTenancyName, uiPathUserName, uiPathPassword));
+            services.AddSingleton(sp => connectedServices);
+            services.AddSingleton(sp => botConfig);
         }
 
         // Note: ReSharper might think it's not used but ASP.NET core uses magic to call Configure to bootstrap the web app.

@@ -1,4 +1,4 @@
-﻿namespace MeetingMinutesBot.UiPathDomain
+﻿namespace UiPathWorkflow
 {
     public class UiPathJobResponse
     {

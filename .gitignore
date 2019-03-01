@@ -11,3 +11,13 @@
 /Bot/bin/Debug/netcoreapp2.1
 /Bot/bin
 /Bot/Properties/PublishProfiles
+/AudioRecorder/bin/Debug
+/AudioRecorder/obj/Debug
+/SpeechCognitiveServices/Properties/Settings.settings
+/.vs/SpeechCognitiveServices/DesignTimeBuild/.dtbcache
+/Bot/appsettings.development.json
+/Bot/MeetingMinutesBot.local.bot
+/packages
+/UiPathWorkflow/bin
+/UiPathWorkflow/obj
+/SpeechCognitiveServices/Properties/Settings.Designer.cs
