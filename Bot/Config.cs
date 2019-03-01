@@ -1,24 +1,18 @@
-﻿namespace MeetingMinutesBot
+﻿using Microsoft.Bot.Configuration;
+
+namespace MeetingMinutesBot
 {
     public class Config
     {
-        public string UiPathCreateHelpDeskJobFileName { get; }
-        public string UiPathWorkingDirectory { get; }
-        public string UiRobotPath { get; }
-        public string UiPathBuyProductsOnAmazonFileName { get; }
-        public string UiPathSendEmailFileName { get; }
-        public string SpeechRecognitionDll { get; }
-        public string SpeechRecognitionWorkingDirectory { get; }
+        public string UiPathTenancyName { get;  }
+        public string UiPathUserName { get; }
+        public string UiPathPassword { get; }
 
-        public Config(string uiPathCreateHelpDeskJobFileName, string uiPathWorkingDirectory, string uiRobotPath, string uiPathBuyProductsOnAmazonFileName, string uiPathSendEmailFileName, string speechRecognitionDll, string speechRecognitionWorkingDirectory)
+        public Config(string uiPathTenancyName, string uiPathUserName, string uiPathPassword)
         {
-            UiPathCreateHelpDeskJobFileName = uiPathCreateHelpDeskJobFileName;
-            UiPathWorkingDirectory = uiPathWorkingDirectory;
-            UiRobotPath = uiRobotPath;
-            UiPathBuyProductsOnAmazonFileName = uiPathBuyProductsOnAmazonFileName;
-            UiPathSendEmailFileName = uiPathSendEmailFileName;
-            SpeechRecognitionDll = speechRecognitionDll;
-            SpeechRecognitionWorkingDirectory = speechRecognitionWorkingDirectory;
+            UiPathTenancyName = uiPathTenancyName;
+            UiPathUserName = uiPathUserName;
+            UiPathPassword = uiPathPassword;
         }
     }
 }

@@ -11,12 +11,7 @@
       "type": "endpoint",
       "id": "2",
       "name": "production",
-      "url": "https://your-bot-url.azurewebsites.net/api/messages"
-    },
-    {
-      "type": "abs",
-      "id": "3",
-      "name": "EchoBot1"
+      "url": ""
     }
   ]
 }

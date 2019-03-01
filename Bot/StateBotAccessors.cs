@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Bot.Builder;
+using Microsoft.Bot.Schema;
 
 namespace MeetingMinutesBot
 {
@@ -18,5 +19,7 @@ namespace MeetingMinutesBot
         public ConversationState ConversationState { get; }
 
         public UserState UserState { get; }
+
+        public ConversationReference AudioRecorderConversationReference { get; set; }
     }
 }

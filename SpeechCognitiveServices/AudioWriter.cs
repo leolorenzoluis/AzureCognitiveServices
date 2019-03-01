@@ -2,23 +2,28 @@
 using System.IO;
 using NAudio.Wave;
 
-namespace MeetingMinutesBot
+namespace SpeechCognitiveServices
 {
     public class AudioWriter
     {
         private WaveFileWriter _waveFileWriter;
         private WaveInEvent _waveIn;
-        private string _outputFilePath;
+        private readonly string _outputFolder;
+        public readonly int WavFileCount;
+        public string OutputFilePath;
+
+
+        public AudioWriter(string outputFolder)
+        {
+            _outputFolder = outputFolder;
+            WavFileCount = Directory.GetFiles(outputFolder, "*.wav", SearchOption.TopDirectoryOnly).Length + 1;
+            Directory.CreateDirectory(_outputFolder);
+        }
 
         public void StartRecording()
         {
-            var outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),"MeetingMinutes");
-            Directory.CreateDirectory(outputFolder);
-
-            var wavFileCount = Directory.GetFiles(outputFolder, "*.wav", SearchOption.TopDirectoryOnly).Length;
-            _outputFilePath = Path.Combine(outputFolder, $"{wavFileCount+1}.wav");
+            OutputFilePath = Path.Combine(_outputFolder, $"{WavFileCount}.wav");
              _waveIn = new WaveInEvent {WaveFormat = new WaveFormat(16000, 16, 1)};
-
 
             _waveIn.DataAvailable += (s, a) =>
             {
@@ -31,7 +36,7 @@ namespace MeetingMinutesBot
                 _waveFileWriter = null;
                 _waveIn.Dispose();
             };
-            _waveFileWriter = new WaveFileWriter(_outputFilePath, _waveIn.WaveFormat);
+            _waveFileWriter = new WaveFileWriter(OutputFilePath, _waveIn.WaveFormat);
             _waveIn.StartRecording();
         }
 

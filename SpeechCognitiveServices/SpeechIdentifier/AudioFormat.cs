@@ -88,6 +88,24 @@ namespace SpeechCognitiveServices.SpeechIdentifier
                    Container.Equals(format.Container);
         }
 
+        protected bool Equals(AudioFormat other)
+        {
+            return Encoding == other.Encoding && ChannelsNumber == other.ChannelsNumber && SampleRate == other.SampleRate && BitsPerSample == other.BitsPerSample && Equals(Container, other.Container);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (int) Encoding;
+                hashCode = (hashCode * 397) ^ ChannelsNumber;
+                hashCode = (hashCode * 397) ^ SampleRate;
+                hashCode = (hashCode * 397) ^ BitsPerSample;
+                hashCode = (hashCode * 397) ^ (Container != null ? Container.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
         /// <summary>
         /// Returns description of audio format
         /// </summary>

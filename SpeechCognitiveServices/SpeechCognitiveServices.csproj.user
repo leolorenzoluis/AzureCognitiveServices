@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <_LastSelectedProfileId>C:\Users\lluisadmin\Documents\Visual Studio 2017\Projects\SpeechCognitiveServices\SpeechCognitiveServices\Properties\PublishProfiles\FolderProfile.pubxml</_LastSelectedProfileId>
+    <_LastSelectedProfileId>C:\Users\lluisadmin\Documents\GitHub\AzureCognitiveServices\SpeechCognitiveServices\Properties\PublishProfiles\FolderProfile.pubxml</_LastSelectedProfileId>
+    <ProjectView>ProjectFiles</ProjectView>
   </PropertyGroup>
 </Project>

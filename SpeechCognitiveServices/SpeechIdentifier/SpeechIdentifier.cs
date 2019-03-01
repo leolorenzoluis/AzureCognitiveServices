@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.ProjectOxford.SpeakerRecognition;
 using Microsoft.ProjectOxford.SpeakerRecognition.Contract;
 using Microsoft.ProjectOxford.SpeakerRecognition.Contract.Identification;
+using SpeechCognitiveServices.Properties;
 using static System.Console;
 
 namespace SpeechCognitiveServices.SpeechIdentifier
@@ -34,7 +35,7 @@ namespace SpeechCognitiveServices.SpeechIdentifier
         {
             _wavFilePath = wavFilePath;
             _httpRequests = httpRequests;
-            _serviceClient = new SpeakerIdentificationServiceClient(Config.SpeakerRecognitionSubscriptionKey);
+            _serviceClient = new SpeakerIdentificationServiceClient(Settings.Default.SpeakerRecognitionSubscriptionKey);
         }
 
         public IEnumerable<RecognitionResult> RecognitionResults => _recognitionResults;
@@ -58,12 +59,15 @@ namespace SpeechCognitiveServices.SpeechIdentifier
                 WriteLine("Streaming audio...");
                 await StreamAudio(WindowSize, StepSize, testProfileIds.Where(x =>
                 {
-                    var id = x.ToString();
-                    if (id.Contains("72041dcf-1ec5-4140-bfda-17e07a33898d") ||
-                        id.Contains("db6999") ||
-                        id.Contains("ce34b08c-3bf7-472b-a896-ff674ab576c9"))
-                        return true;
-                    return false;
+                    // Uncomment if you only want to specify select speakers
+                    //var id = x.ToString();
+                    //if (id.Contains("72041dcf-1ec5-4140-bfda-17e07a33898d") ||
+                    //    id.Contains("db6999") ||
+                    //    id.Contains("ce34b08c-3bf7-472b-a896-ff674ab576c9"))
+                    //    return true;
+                    //return false;
+                    // ReSharper disable once ConvertToLambdaExpression
+                    return true;
                 }).ToArray(), StreamAudioCancellationTokenSource.Token);
             }
             catch (GetProfileException ex)
