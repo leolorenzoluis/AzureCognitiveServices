@@ -93,6 +93,7 @@ namespace MeetingMinutesBot
                 await turnContext.SendActivityAsync(
                     $"Job {uiPathJobResponse.JobId} is complete. {uiPathJobResponse.Message}",
                     $"Job {uiPathJobResponse.JobId} is complete. {uiPathJobResponse.Message}",
+                    InputHints.ExpectingInput,
                     cancellationToken: token);
                 _logger.LogDebug($"Received UI Path Job Response Type {uiPathJobResponse.Type}");
                 Activity reply;
@@ -102,6 +103,9 @@ namespace MeetingMinutesBot
                         reply = turnContext.Activity.CreateReply(
                             "Networking team has approved your help desk ticket. Which of the following approved routers would you like to purchase?");
                         reply.Type = ActivityTypes.Message;
+                        reply.Speak =
+                            "Networking team has approved your help desk ticket. Which of the following approved routers would you like to purchase?";
+                        reply.InputHint = InputHints.ExpectingInput;
                         reply.TextFormat = TextFormatTypes.Plain;
                         reply.SuggestedActions = new SuggestedActions()
                         {
@@ -383,6 +387,7 @@ namespace MeetingMinutesBot
             await _jobState.SaveChangesAsync(turnContext, cancellationToken: cancellationToken);
             await turnContext.SendActivityAsync(
                 $"Job {job.Id} is created. Delegating task to an RPA Robot. We'll notify you when it's complete.",
+                inputHint:InputHints.IgnoringInput,
                 cancellationToken: cancellationToken);
             return job;
         }
