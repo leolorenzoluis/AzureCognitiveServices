@@ -17,12 +17,12 @@ namespace SpeechCognitiveServices
         {
             _outputFolder = outputFolder;
             WavFileCount = Directory.GetFiles(outputFolder, "*.wav", SearchOption.TopDirectoryOnly).Length + 1;
+            OutputFilePath = Path.Combine(_outputFolder, $"{WavFileCount}.wav");
             Directory.CreateDirectory(_outputFolder);
         }
 
         public void StartRecording()
         {
-            OutputFilePath = Path.Combine(_outputFolder, $"{WavFileCount}.wav");
              _waveIn = new WaveInEvent {WaveFormat = new WaveFormat(16000, 16, 1)};
 
             _waveIn.DataAvailable += (s, a) =>
@@ -36,7 +36,7 @@ namespace SpeechCognitiveServices
                 _waveFileWriter = null;
                 _waveIn.Dispose();
             };
-            _waveFileWriter = new WaveFileWriter(OutputFilePath, _waveIn.WaveFormat);
+            _waveFileWriter = new WaveFileWriter(Path.Combine(_outputFolder, $"{WavFileCount+1}.wav"), _waveIn.WaveFormat);
             _waveIn.StartRecording();
         }
 

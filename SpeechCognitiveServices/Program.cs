@@ -24,6 +24,7 @@ namespace SpeechCognitiveServices
     internal class Program
     {
         private static readonly Settings Settings = Settings.Default;
+
         private static readonly string OutputFolder = Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
             "MeetingMinutes");
@@ -33,18 +34,20 @@ namespace SpeechCognitiveServices
 
         private static async Task Main()
         {
-            _uiPathHttpClient = new UiPathHttpClient(Settings.UiPathUserName, Settings.UiPathPassword, Settings.UiPathTenancyName);
+            _uiPathHttpClient = new UiPathHttpClient(Settings.UiPathUserName, Settings.UiPathPassword,Settings.UiPathTenancyName);
             // DirectLine requires at least TLS 1.2
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             WriteLine("== Initializing direct line connection ==");
             var tokenResponse = new DirectLineClient(Settings.BotSecret).Tokens
                 .GenerateTokenForNewConversation();
-            
+
             var conversation = await InitializeDirectLine(tokenResponse);
             var webSocketClient = new WebSocket(conversation.StreamUrl)
             {
-                SslConfiguration = { EnabledSslProtocols = SslProtocols.Tls12 }
+                SslConfiguration = {EnabledSslProtocols = SslProtocols.Tls12}
+
             };
+            webSocketClient.OnOpen += (sender, args) => WriteLine("Connected to direct line.");
             webSocketClient.OnMessage += async (sender, eventArgs) => { await WebSocketClientOnOnMessage(eventArgs); };
             webSocketClient.Connect();
             Read();
@@ -70,6 +73,7 @@ namespace SpeechCognitiveServices
             try
             {
                 var wavFileCount = _audioWriter.WavFileCount;
+                _audioWriter = new AudioWriter(OutputFolder);
                 meetingMinutesUiPathArguments.KeyPhrasesFilePath = $"{wavFileCount}.keyphrases.txt";
                 meetingMinutesUiPathArguments.MinutesFilePath = $"{wavFileCount}.minutes.txt";
                 meetingMinutesUiPathArguments.SentimentFilePath = $"{wavFileCount}.sentiment.txt";
@@ -103,6 +107,7 @@ namespace SpeechCognitiveServices
                     var transcriber = new Transcriber(_audioWriter.OutputFilePath, fullTranscribeSpeechWriter);
                     await transcriber.TranscribeSpeechFromWavFileInput(config);
                 }
+
                 WriteLine("===== Done Transcribing entire audio =====");
                 WriteLine();
                 WriteLine("===== Initializing Key Extraction and Sentiment Analysis =====");
@@ -139,7 +144,8 @@ namespace SpeechCognitiveServices
                 await cloudBlobContainer.SetPermissionsAsync(permissions);
 
                 var outputFilesPath = Directory.GetFiles(OutputFolder, "*.txt", SearchOption.TopDirectoryOnly);
-                foreach (var outputFilePath in outputFilesPath.Where(x => x.Contains(_audioWriter.WavFileCount.ToString())))
+                foreach (var outputFilePath in outputFilesPath.Where(x =>
+                    x.Contains(_audioWriter.WavFileCount.ToString())))
                 {
                     var fileName = GetFileName(outputFilePath);
                     WriteLine($"== Uploading {fileName} to Azure Blob (cognitiveservicesoutput)");
@@ -156,7 +162,8 @@ namespace SpeechCognitiveServices
                     // Get the value of the continuation token returned by the listing call.
                     blobContinuationToken = results.ContinuationToken;
                     var cloudBlockBlobs = results.Results.OfType<CloudBlockBlob>().ToList();
-                    meetingMinutesUiPathArguments.DownloadUrls.AddRange(cloudBlockBlobs.Select(x => x.Uri.AbsoluteUri));
+                    meetingMinutesUiPathArguments.DownloadUrls.AddRange(cloudBlockBlobs.Select(x => x.Uri.AbsoluteUri)
+                        .Where(x => x.Contains(_audioWriter.WavFileCount.ToString())));
                     foreach (var item in meetingMinutesUiPathArguments.DownloadUrls)
                     {
                         WriteLine(item);
@@ -213,7 +220,8 @@ namespace SpeechCognitiveServices
                         };
                         await CallCognitiveServices(uiPathDownloadArguments);
                         await UploadToAzureBlob(uiPathDownloadArguments);
-                        await _uiPathHttpClient.SendUiPathJob(uiPathDownloadArguments, Settings.UiPathMeetingMinutesJobKey);
+                        await _uiPathHttpClient.SendUiPathJob(uiPathDownloadArguments,
+                            Settings.UiPathMeetingMinutesJobKey);
 
                         _audioWriter = null;
                     }
@@ -264,14 +272,19 @@ namespace SpeechCognitiveServices
         {
             var person = "Unknown";
             var s = currentResult.Value.IdentifiedProfileId.ToString();
-            if (s.Contains("1aef1c90"))
+            if (s.Contains("1aef1c90-8936-49ed-aaf0-0b4843f5f95b"))
             {
                 person = "Judith";
             }
-            else if (s.Contains("5d68a5aa"))
+            else if (s.Contains("5d68a5aa-4426-4c4b-b8f9-2de573492dcb"))
             {
                 person = "Leo";
             }
+            else if (s.Contains("7af47c2c-7165-4cbc-997a-b3f8fc5bbbbb"))
+            {
+                person = "Meeting Messenger Bot";
+            }
+
             return person;
         }
     }

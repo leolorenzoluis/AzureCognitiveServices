@@ -66,7 +66,8 @@ namespace MeetingMinutesBot
             AppId = string.IsNullOrEmpty(endpointService.AppId) ? "1" : endpointService.AppId;
             AppPassword = string.IsNullOrEmpty(endpointService.AppId) ? "1" : endpointService.AppPassword;
             ServiceEndpoint = endpointService.Endpoint;
-            _uiPathHttpClient = new UiPathHttpClient(config.UiPathUserName, config.UiPathPassword, config.UiPathTenancyName);
+            _uiPathHttpClient =
+                new UiPathHttpClient(config.UiPathUserName, config.UiPathPassword, config.UiPathTenancyName);
         }
 
         private async Task CompleteJobAsync(BotAdapter adapter, string botId, JobStorage jobStorage,
@@ -90,11 +91,12 @@ namespace MeetingMinutesBot
                 jobStorage[uiPathJobResponse.JobId].Completed = true;
                 await _jobStatePropertyAccessor.SetAsync(turnContext, jobStorage, token);
                 await _jobState.SaveChangesAsync(turnContext, cancellationToken: token);
-                await turnContext.SendActivityAsync(
-                    $"Job {uiPathJobResponse.JobId} is complete. {uiPathJobResponse.Message}",
-                    $"Job {uiPathJobResponse.JobId} is complete. {uiPathJobResponse.Message}",
-                    InputHints.ExpectingInput,
-                    cancellationToken: token);
+                var activities = new List<IActivity>();
+                var jobCompleteActivity = turnContext.Activity.CreateReply();
+                jobCompleteActivity.Text = $"Job {uiPathJobResponse.JobId} is complete. {uiPathJobResponse.Message}";
+                jobCompleteActivity.Speak = $"Job {uiPathJobResponse.JobId} is complete. {uiPathJobResponse.Message}";
+                jobCompleteActivity.InputHint = InputHints.IgnoringInput;
+                activities.Add(jobCompleteActivity);
                 _logger.LogDebug($"Received UI Path Job Response Type {uiPathJobResponse.Type}");
                 Activity reply;
                 switch (uiPathJobResponse.Type)
@@ -105,7 +107,7 @@ namespace MeetingMinutesBot
                         reply.Type = ActivityTypes.Message;
                         reply.Speak =
                             "Networking team has approved your help desk ticket. Which of the following approved routers would you like to purchase?";
-                        reply.InputHint = InputHints.ExpectingInput;
+                        reply.InputHint = InputHints.IgnoringInput;
                         reply.TextFormat = TextFormatTypes.Plain;
                         reply.SuggestedActions = new SuggestedActions()
                         {
@@ -118,24 +120,29 @@ namespace MeetingMinutesBot
                                 },
                                 new CardAction()
                                 {
-                                    Title = "NETGEAR R6700 Nighthawk", Type = ActionTypes.ImBack,
+                                    Title = "NETGEAR R6700 Nighthawk", Type = ActionTypes.PostBack,
                                     Value = "Please purchase  NETGEAR R6700 Nighthawk"
                                 },
                                 new CardAction()
                                 {
-                                    Title = "TP-Link AC1200", Type = ActionTypes.ImBack,
-                                    Value = "Please purchase TP-Link AC1200"
+                                    Title = "TP-Link AC1200", Type = ActionTypes.MessageBack,
+                                    Value = "Please purchase TP-Link AC1200",
                                 }
                             }
                         };
-                        await turnContext.SendActivityAsync(reply, cancellationToken: token);
+
+                        activities.Add(reply);
                         break;
                     case UiPathEventType.Amazon:
                         reply = turnContext.Activity.CreateReply();
                         reply.Attachments.Add(GetReceiptCard().ToAttachment());
-                        await turnContext.SendActivityAsync(reply, cancellationToken: token);
+                        reply.Speak = "Here is your order information.";
+                        reply.InputHint = InputHints.IgnoringInput;
+                        activities.Add(reply);
                         break;
                 }
+
+                await turnContext.SendActivitiesAsync(activities.ToArray(), token);
             };
         }
 
@@ -160,102 +167,142 @@ namespace MeetingMinutesBot
                 case ActivityTypes.Message:
                 {
                     // Check LUIS model
-                    var recognizerResult =
-                        await _services.LuisServices[LuisKey].RecognizeAsync(turnContext, cancellationToken);
-                    var topIntent = recognizerResult?.GetTopScoringIntent();
-                    if (topIntent != null && topIntent.Value.score >= 0.5)
+                    try
                     {
-                        Job job;
-                        switch (topIntent.Value.intent)
+                        var recognizerResult =
+                            await _services.LuisServices[LuisKey].RecognizeAsync(turnContext, cancellationToken);
+                        var topIntent = recognizerResult?.GetTopScoringIntent();
+                        if (topIntent != null && topIntent.Value.score >= 0.5)
                         {
-                            case StartRecording:
-                                await turnContext.SendActivityAsync("Boss I'm going to start the recording.", inputHint: InputHints.IgnoringInput,
-                                    cancellationToken: cancellationToken);
-                                await turnContext.Adapter.ContinueConversationAsync(AppId,
-                                    _stateBotPropertyAccessors.AudioRecorderConversationReference,
-                                    async (context, token) =>
-                                    {
-                                        await context.SendActivityAsync(StartRecording, cancellationToken: token);
-                                    },
-                                    cancellationToken);
-                                break;
-                            case SalesForecast:
-                                await turnContext.SendActivityAsync(
-                                    "Boss, I'm querying finance systems right now. I'll get back to you.",
-                                    cancellationToken: cancellationToken);
-                                await Task.Delay(7000, cancellationToken);
-                                await turnContext.SendActivityAsync(
-                                    "Our sales forecast for this year will be $100 million. So work hard play hard!",
-                                    cancellationToken: cancellationToken);
-                                break;
-                            case StopRecording:
-                                await turnContext.SendActivityAsync(
-                                    "Boss I'm going to stop the recording and will start processing meeting minutes.",
-                                    cancellationToken: cancellationToken);
-
-                                job = await CreateJob(turnContext, cancellationToken);
-                                await turnContext.Adapter.ContinueConversationAsync(AppId,
-                                    _stateBotPropertyAccessors.AudioRecorderConversationReference,
-                                    async (context, token) =>
-                                    {
-                                        await context.SendActivityAsync($"{StopRecording},{job.Id}", cancellationToken: token);
-                                    },
-                                    cancellationToken);
-                                break;
-                            case CreateHelpDeskTicket:
-                                job = await CreateJob(turnContext, cancellationToken);
-                                //var uiPathJobRequest = new UiPathJobRequest(job.Id, turnContext.Activity.ServiceUrl);
-
-                                var uiPathArguments = new UiPathArguments
-                                {
-                                    BotAppId = AppId,
-                                    BotAppPassword = AppPassword,
-                                    JobId = job.Id.ToString(),
-                                    ServiceUrl = ServiceEndpoint
-                                };
-                                await _uiPathHttpClient.SendUiPathJob(uiPathArguments, "963d294a-960b-4e16-b6af-3b5dd782f637",
-                                    cancellationToken);
-                                break;
-                            case BuyAmazon:
-                                job = await CreateJob(turnContext, cancellationToken);
-                                var amazonJob = new AmazonUiPathArguments
-                                {
-                                    BotAppId = AppId,
-                                    BotAppPassword = AppPassword,
-                                    JobId = job.Id.ToString(),
-                                    ServiceUrl = ServiceEndpoint,
-                                    Products = new List<string> {"2QW1646 Cisco RV320"}
-                                };
-                                await _uiPathHttpClient.SendUiPathJob(amazonJob, "91497268-6c3a-4bef-8fdd-36a802386921",
-                                    cancellationToken);
-                                break;
-                            case SendEmail:
-                                job = await CreateJob(turnContext, cancellationToken);
-                                var emailJob = new UiPathEmailJob(job.Id.ToString(), turnContext.Activity.ServiceUrl,
-                                    $"Meeting minutes for {DateTime.Today.ToShortDateString()}", "Hello World",
-                                    "lluis@psi-it.com");
-
-                                await _uiPathHttpClient.SendUiPathJob(emailJob, "91497268-6c3a-4bef-8fdd-36a802386921",
-                                    cancellationToken);
+                            Job job;
+                            switch (topIntent.Value.intent)
+                            {
+                                case StartRecording:
+                                    await turnContext.SendActivityAsync("Boss I'm going to start the recording.",
+                                        inputHint: InputHints.IgnoringInput,
+                                        cancellationToken: cancellationToken);
+                                    await turnContext.Adapter.ContinueConversationAsync(AppId,
+                                        _stateBotPropertyAccessors.AudioRecorderConversationReference,
+                                        async (context, token) =>
+                                        {
+                                            await context.SendActivityAsync(StartRecording, cancellationToken: token);
+                                        },
+                                        cancellationToken);
                                     break;
-                            default:
-                                // Help or no intent identified, either way, let's provide some help.
-                                // to the user
-                                await turnContext.SendActivityAsync(
-                                    "Boss I'm sorry but I didn't understand what you just said to me.",
-                                    inputHint: InputHints.IgnoringInput,
-                                    cancellationToken: cancellationToken);
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        const string msg =
-                            @"No LUIS intents were found. Try typing 'Start Meeting' or 'Stop Meeting'.";
-                        await turnContext.SendActivityAsync(msg, msg, InputHints.IgnoringInput, cancellationToken: cancellationToken);
-                    }
+                                case SalesForecast:
+                                    await turnContext.SendActivityAsync(
+                                        "Boss, I'm querying finance systems right now. I'll get back to you.",
+                                        cancellationToken: cancellationToken);
+                                    await Task.Delay(7000, cancellationToken);
+                                    await turnContext.SendActivityAsync(
+                                        "Our sales forecast for this year will be $100 million. So work hard play hard!",
+                                        cancellationToken: cancellationToken);
+                                    break;
+                                case StopRecording:
+                                    var replies = new IActivity[2];
+                                    job = await CreateJob(turnContext, cancellationToken);
+                                    var stopRecordingReply = turnContext.Activity.CreateReply();
+                                    stopRecordingReply.Text =
+                                        "Boss I'm going to stop the recording and will start processing meeting minutes.";
+                                    stopRecordingReply.InputHint = InputHints.IgnoringInput;
+                                    stopRecordingReply.Speak =
+                                        "Boss I'm going to stop the recording and will start processing meeting minutes.";
+                                    replies[0] = stopRecordingReply;
+                                    var messageReply = turnContext.Activity.CreateReply();
+                                    messageReply.Text =
+                                        $"Job {job.Id} is created. Delegating task to an RPA Robot. We'll notify you when it's complete.";
+                                    messageReply.Speak =
+                                        $"Job {job.Id} is created. Delegating task to an RPA Robot. We'll notify you when it's complete.";
+                                    messageReply.InputHint = InputHints.IgnoringInput;
+                                    replies[1] = messageReply;
+                                    await turnContext.SendActivitiesAsync(replies, cancellationToken);
+                                    await turnContext.Adapter.ContinueConversationAsync(AppId,
+                                        _stateBotPropertyAccessors.AudioRecorderConversationReference,
+                                        async (context, token) =>
+                                        {
+                                            await context.SendActivityAsync($"{StopRecording},{job.Id}",
+                                                cancellationToken: token);
+                                        },
+                                        cancellationToken);
+                                    break;
+                                case CreateHelpDeskTicket:
+                                    job = await CreateJob(turnContext, cancellationToken);
+                                    await turnContext.SendActivityAsync(
+                                        $"Job {job.Id} is created. Delegating task to an RPA Robot. We'll notify you when it's complete.",
+                                        $"Job {job.Id} is created. Delegating task to an RPA Robot. We'll notify you when it's complete.",
+                                        inputHint: InputHints.IgnoringInput,
+                                        cancellationToken: cancellationToken);
+                                    var uiPathArguments = new UiPathArguments
+                                    {
+                                        BotAppId = AppId,
+                                        BotAppPassword = AppPassword,
+                                        JobId = job.Id.ToString(),
+                                        ServiceUrl = ServiceEndpoint
+                                    };
+                                    await _uiPathHttpClient.SendUiPathJob(uiPathArguments,
+                                        "963d294a-960b-4e16-b6af-3b5dd782f637",
+                                        cancellationToken);
+                                    break;
+                                case BuyAmazon:
+                                    job = await CreateJob(turnContext, cancellationToken);
+                                    await turnContext.SendActivityAsync(
+                                        $"Job {job.Id} is created. Delegating task to an RPA Robot. We'll notify you when it's complete.",
+                                        $"Job {job.Id} is created. Delegating task to an RPA Robot. We'll notify you when it's complete.",
+                                        inputHint: InputHints.IgnoringInput,
+                                        cancellationToken: cancellationToken);
+                                        var amazonJob = new AmazonUiPathArguments
+                                    {
+                                        BotAppId = AppId,
+                                        BotAppPassword = AppPassword,
+                                        JobId = job.Id.ToString(),
+                                        ServiceUrl = ServiceEndpoint,
+                                        Products = new List<string> {"2QW1646 Cisco RV320"}
+                                    };
+                                    await _uiPathHttpClient.SendUiPathJob(amazonJob,
+                                        "91497268-6c3a-4bef-8fdd-36a802386921",
+                                        cancellationToken);
+                                    break;
+                                case SendEmail:
+                                    job = await CreateJob(turnContext, cancellationToken);
+                                    await turnContext.SendActivityAsync(
+                                        $"Job {job.Id} is created. Delegating task to an RPA Robot. We'll notify you when it's complete.",
+                                        $"Job {job.Id} is created. Delegating task to an RPA Robot. We'll notify you when it's complete.",
+                                        inputHint: InputHints.IgnoringInput,
+                                        cancellationToken: cancellationToken);
+                                        var emailJob = new UiPathEmailJob(job.Id.ToString(),
+                                        turnContext.Activity.ServiceUrl,
+                                        $"Meeting minutes for {DateTime.Today.ToShortDateString()}", "Hello World",
+                                        "lluis@psi-it.com");
 
-                    break;
+                                    await _uiPathHttpClient.SendUiPathJob(emailJob,
+                                        "91497268-6c3a-4bef-8fdd-36a802386921",
+                                        cancellationToken);
+                                    break;
+                                default:
+                                    // Help or no intent identified, either way, let's provide some help.
+                                    // to the user
+                                    await turnContext.SendActivityAsync(
+                                        "Boss I'm sorry but I didn't understand what you just said to me.",
+                                        inputHint: InputHints.IgnoringInput,
+                                        cancellationToken: cancellationToken);
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            const string msg =
+                                @"No LUIS intents were found. Try typing 'Start Meeting' or 'Stop Meeting'.";
+                            await turnContext.SendActivityAsync(msg, msg, InputHints.IgnoringInput,
+                                cancellationToken: cancellationToken);
+                        }
+
+                        break;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        throw;
+                    }
                 }
 
                 // This will be true if it was an external send a type event and value is the job id.
@@ -322,7 +369,6 @@ namespace MeetingMinutesBot
         }
 
 
-
         /// <summary>
         /// Creates a <see cref="ReceiptCard"/>.
         /// </summary>
@@ -333,7 +379,7 @@ namespace MeetingMinutesBot
         {
             var receiptCard = new ReceiptCard
             {
-                Title = "John Doe",
+                Title = "Judith Hwang",
 
                 Facts = new List<Fact>
                     {new Fact("Order Number", "9378-4839-43289"), new Fact("Payment Method", "VISA 1234-****")},
@@ -343,7 +389,7 @@ namespace MeetingMinutesBot
                     new ReceiptItem
                     {
                         Image = new CardImage(
-                            "http://www.vmastoryboard.com/wp-content/uploads/2014/08/Amazon-A-Logo.jpg"),
+                            "https://www.vmastoryboard.com/wp-content/uploads/2014/08/Amazon-A-Logo.jpg"),
                     },
                     new ReceiptItem(
                         "2QW1646 Cisco RV320",
@@ -385,10 +431,6 @@ namespace MeetingMinutesBot
             jobStorage.TryAdd(jobStorage.Count + 1, job);
             await _jobStatePropertyAccessor.SetAsync(turnContext, jobStorage, cancellationToken);
             await _jobState.SaveChangesAsync(turnContext, cancellationToken: cancellationToken);
-            await turnContext.SendActivityAsync(
-                $"Job {job.Id} is created. Delegating task to an RPA Robot. We'll notify you when it's complete.",
-                inputHint:InputHints.IgnoringInput,
-                cancellationToken: cancellationToken);
             return job;
         }
 
@@ -396,6 +438,8 @@ namespace MeetingMinutesBot
             CancellationToken cancellationToken)
         {
             await turnContext.SendActivityAsync("Hello. Welcome to the Meeting Minutes bot!",
+                "Hello. Welcome to the Meeting Minutes bot!",
+                InputHints.ExpectingInput,
                 cancellationToken: cancellationToken);
         }
     }
